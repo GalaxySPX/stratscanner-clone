@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Ephemeral in-memory store (OK for dev). Use DB/Redis for persistence.
+// In-memory store (good for testing; use DB/Redis for persistence)
 const g = global as any;
 g._signals = g._signals ?? [] as any[];
 
@@ -11,16 +11,22 @@ function bad(msg: string, code = 400) {
   return NextResponse.json({ ok: false, error: msg }, { status: code });
 }
 
-// POST: TradingView webhook sends JSON here
+// POST /api/tv?key=YOUR_SECRET
+// Body (from TradingView alert JSON): { symbol, tf, time, open, high, low, close, volume, pattern }
 export async function POST(req: Request) {
   const { searchParams } = new URL(req.url);
   const key = searchParams.get('key');
-  if (!key || key !== process.env.TV_WEBHOOK_KEY) return bad('unauthorized', 401);
+
+  // Accept either env var or fallback (change fallback to your desired key)
+  const allowed = process.env.TV_WEBHOOK_KEY ?? 'MySuperSecretKey_9342';
+  if (key !== allowed) return bad('unauthorized', 401);
 
   let payload: any;
   try { payload = await req.json(); } catch { return bad('invalid json', 400); }
 
-  if (!payload?.symbol || !payload?.tf || !payload?.time) return bad('missing fields', 400);
+  if (!payload?.symbol || !payload?.tf || !payload?.time) {
+    return bad('missing fields', 400);
+  }
 
   const row = {
     symbol: String(payload.symbol),
@@ -42,7 +48,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// GET: your UI fetches latest rows
+// GET /api/tv  → used by the “Load Signals (TV)” button
 export async function GET() {
   const rows = (global as any)._signals ?? [];
   return NextResponse.json({ rows, asOf: new Date().toISOString() });
