@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Ephemeral in-memory store (OK for dev). Use DB/Redis for persistence.
+// Ephemeral memory store (OK for dev; use DB/Redis for production)
 const g = global as any;
 g._signals = g._signals ?? [] as any[];
 
@@ -11,7 +11,6 @@ function bad(msg: string, code = 400) {
   return NextResponse.json({ ok: false, error: msg }, { status: code });
 }
 
-// POST: TradingView webhook sends JSON here
 export async function POST(req: Request) {
   const { searchParams } = new URL(req.url);
   const key = searchParams.get('key');
@@ -42,7 +41,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// GET: your UI fetches latest rows
 export async function GET() {
   const rows = (global as any)._signals ?? [];
   return NextResponse.json({ rows, asOf: new Date().toISOString() });
