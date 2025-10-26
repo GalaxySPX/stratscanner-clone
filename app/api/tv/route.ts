@@ -53,3 +53,4 @@ export async function GET() {
   const rows = (global as any)._signals ?? [];
   return NextResponse.json({ rows, asOf: new Date().toISOString() });
 }
+
